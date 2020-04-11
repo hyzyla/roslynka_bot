@@ -12,6 +12,8 @@ class TelegramUser(db.Model):
     language_code = models.Text(nullable=True)
 
     user_id = models.ForeignKey('users.id', unique=True)
+    user = db.relationship('User')
+
     date_created = models.DateCreated()
 
 

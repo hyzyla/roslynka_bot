@@ -1,8 +1,8 @@
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID as SA_UUID
+from sqlalchemy.dialects import postgresql
 
 from app import db
-from utils import now
+from utils import now, generate_uuid
 
 
 class Column(db.Column):
@@ -20,9 +20,13 @@ class Column(db.Column):
 
 
 class UUID(Column):
-    type_ = SA_UUID()
+    type_ = postgresql.UUID()
     primary_key: bool = True
     unique: bool = True
+
+    def __init__(self, **kwargs) -> None:
+        kwargs['default'] = generate_uuid
+        super().__init__(**kwargs)
 
 
 class ForeignKey(Column):
