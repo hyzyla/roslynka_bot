@@ -1,0 +1,30 @@
+version: '3'
+
+services:
+
+  app:
+    tty: true
+    environment:
+      DATABASE_URL: postgres://admin:admin@db/bot
+      TELEGRAM_TOKEN: 1129177767:AAHpYZQ7G0vcmU_fziDEV4ju1xarGI4QmOI
+      FLASK_APP: app:app
+      FLASK_DEBUG: "1"
+      FLASK_ENV: development
+
+    build: .
+    image: bot-web
+    ports: ["5000:5000"]
+    volumes: ['.:/work']
+    depends_on: [db]
+    entrypoint: flask
+    command: run --host 0.0.0.0
+
+  db:
+    image: postgres
+    ports: ["5432:5432"]
+    volumes:
+      - ./.database:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: bot
+      POSTGRES_PASSWORD: admin
+      POSTGRES_USER: admin
