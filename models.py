@@ -1,20 +1,8 @@
-import datetime
-import uuid
-
 import sqlalchemy as sa
+from sqlalchemy.dialects.postgresql import UUID as SA_UUID
 
 from app import db
-from sqlalchemy.dialects.postgresql import UUID
-
 from utils import now
-
-
-def uuid_column():
-    return  db.Column(UUID(), primary_key=True, unique=True)
-
-
-UUID_COLUMN = db.Column(UUID(), primary_key=True, unique=True)
-DATE_CREATED_COLUMN = db.Column(db.DateTime(), nullable=False, default=now)
 
 
 class Column(db.Column):
@@ -32,7 +20,7 @@ class Column(db.Column):
 
 
 class UUID(Column):
-    type_ = UUID()
+    type_ = SA_UUID()
     primary_key: bool = True
     unique: bool = True
 
@@ -55,6 +43,10 @@ class DateCreated(Column):
 
 class Text(Column):
     type_ = sa.Text()
+
+
+class Integer(Column):
+    type_ = sa.BigInteger()
 
 
 class Interval(Column):

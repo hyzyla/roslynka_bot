@@ -5,7 +5,12 @@ import models
 class TelegramUser(db.Model):
     __tablename__ = 'telegram_users'
 
-    id = models.UUID()
+    id = models.Integer(primary_key=True)
+    username = models.Text(nullable=True)
+    first_name = models.Text(nullable=True)
+    last_name = models.Text(nullable=True)
+    language_code = models.Text(nullable=True)
+
     user_id = models.ForeignKey('users.id', unique=True)
     date_created = models.DateCreated()
 
