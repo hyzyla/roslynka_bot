@@ -14,3 +14,11 @@ Migrate database schema:
 ```shell script
 docker-compose run --rm app db upgrade
 ```
+
+
+## TODO:
+  - [ ] Add plant photo
+  - [ ] Notify user
+  - [ ] Store watering history
+  - [ ] Update notify settings (time of day)
+  - [ ] Improve bot dialogs
