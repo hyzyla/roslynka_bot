@@ -21,6 +21,10 @@ class User(db.Model):
     __tablename__ = 'users'
 
     id = models.UUID()
+
+    home_id = models.ForeignKey('homes.id', nullable=True)
+    home = db.relationship('Home')
+
     date_created = models.DateCreated()
 
 
@@ -29,6 +33,7 @@ class Home(db.Model):
 
     id = models.UUID()
     date_created = models.DateCreated()
+    plants = db.relationship('Plant')
 
 
 class Plant(db.Model):
@@ -38,22 +43,7 @@ class Plant(db.Model):
     name = models.Text()
     watering_interval = models.Interval()
 
-    date_created = models.DateCreated()
-
-
-class HomePlant(db.Model):
-    __tablename__ = 'home_plants'
-
-    id = models.UUID()
     home_id = models.ForeignKey('homes.id')
-    plant_id = models.ForeignKey('plants.id')
-    date_created = models.DateCreated()
+    home = db.relationship('Home')
 
-
-class HomeUser(db.Model):
-    __tablename__ = 'home_users'
-
-    id = models.UUID()
-    home_id = models.ForeignKey('homes.id')
-    plant_id = models.ForeignKey('users.id')
     date_created = models.DateCreated()
