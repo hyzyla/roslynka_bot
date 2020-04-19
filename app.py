@@ -13,7 +13,7 @@ from flask import Flask, request
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from telegram import (
-    InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, Update
+    InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, Update, Message
 )
 from telegram.ext import (
     CallbackQueryHandler, CommandHandler, ConversationHandler, Dispatcher, Filters,
@@ -98,7 +98,7 @@ def parse_json(data: str) -> DataDict:
 
 
 def update_message(update: Update, *args, **kwargs):
-    if update.callback_query:
+    if update.callback_query and update.effective_message.text:
         update.effective_message.edit_text(*args, **kwargs)
     else:
         update.effective_message.reply_text(*args, **kwargs)
@@ -133,10 +133,35 @@ class CallbackHandler(CallbackQueryHandler):
         return parts[0] == self.type_
 
 
+def plant_photo_button(plant: Plant):
+    if plant.photo_id:
+        text = 'Фото'
+        data = ('plant-photo', plant.id)
+    else:
+        text = 'Додати фото'
+        data = ('plant-update-photo', plant.id)
+    return InlineButton(text=text, data=data)
+
+
+def plant_notification(update: Update, plant: Plant):
+    buttons = [
+        [InlineButton(text='Полито', data=('plant-watering', plant.id))],
+    ]
+    reply_markup = InlineKeyboardMarkup(buttons)
+    update.effective_user.send_photo(
+        photo=plant.photo_id,
+        reply_markup=reply_markup,
+    )
+
+
 def plant_screen(update: Update, plant: Plant):
+    photo_button = plant_photo_button(plant)
     button_list = [
+        [photo_button],
         [InlineButton(text="Оновити ім’я", data=('plant-name', plant.id))],
         [InlineButton(text="Оновити інтервал", data=('plant-interval', plant.id))],
+        [InlineButton(text="Видалити", data=('plant-delete', plant.id))],
+        [InlineButton(text="Нагадування", data=('plant-notification', plant.id))],
         [InlineButton(text='Всі рослинки', data=('plant-menu',))]
     ]
     reply_markup = InlineKeyboardMarkup(button_list)
@@ -146,6 +171,19 @@ def plant_screen(update: Update, plant: Plant):
         reply_markup=reply_markup,
         parse_mode='Markdown',
     )
+
+
+def get_photo_id(update: Update) -> Optional[str]:
+    message = update.message
+    photos = message.photo
+    if not photos:
+        return None
+    biggest = photos[0]
+    for photo in photos:
+        if photo.file_size > biggest.file_size:
+            biggest = photo
+
+    return biggest.file_id
 
 
 @user_required
@@ -199,10 +237,7 @@ def adding_name(update, context, telegram_user):
     db.session.add(plant)
     db.session.commit()
 
-    update.message.reply_markdown(
-        text=plant_description(plant),
-        reply_markup=reply_markup,
-    )
+    plant_screen(update, plant)
     return ConversationHandler.END
 
 
@@ -269,6 +304,69 @@ def update_interval(update, context, telegram_user):
     return ConversationHandler.END
 
 
+@user_required
+def photo_plant(update: Update, context, telegram_user):
+    _, plant_id = update.callback_query.data.split('|')
+    plant = Plant.query.get(plant_id)
+    update.callback_query.answer()
+
+    buttons = [
+        [InlineButton(text='Оновити фото', data=('plant-update-photo', plant_id))],
+        [InlineButton(text='Показати рослину', data=('plant-choose', plant.id))],
+    ]
+    reply_markup = InlineKeyboardMarkup(buttons)
+    update.effective_user.send_photo(
+        photo=plant.photo_id,
+        reply_markup=reply_markup,
+    )
+
+
+@user_required
+def ask_update_photo(update, context, telegram_user):
+    _, plant_id = update.callback_query.data.split('|')
+    context.user_data['plant_id'] = plant_id
+    update.effective_message.reply_text("Надішліть фото")
+    update.effective_message.delete()
+    return UPDATE_PHOTO_STATE
+
+
+@user_required
+def update_photo(update, context, telegram_user):
+    plant_id: str = context.user_data['plant_id']
+
+    photo_id = get_photo_id(update)
+
+    plant = Plant.query.get(plant_id)
+    plant.photo_id = photo_id
+    db.session.commit()
+
+    plant_screen(update, plant)
+    return ConversationHandler.END
+
+
+@user_required
+def delete_plant(update, context, telegram_user):
+    _, plant_id = update.callback_query.data.split('|')
+    Plant.query.filter_by(id=plant_id).delete()
+    db.session.commit()
+
+    command_list(update, context)
+
+
+@user_required
+def notify_plant(update, context, telegram_user):
+    _, plant_id = update.callback_query.data.split('|')
+    plant = Plant.query.get(plant_id)
+    plant_notification(update, plant)
+
+
+@user_required
+def watering_plant(update, context, telegram_user):
+    _, plant_id = update.callback_query.data.split('|')
+    plant = Plant.query.get(plant_id)
+    
+
+
 @enum.unique
 class AddPlantStates(enum.Enum):
     ADDING_INTERVAL = 'ADDING_INTERVAL'
@@ -277,7 +375,7 @@ class AddPlantStates(enum.Enum):
 
 UPDATE_NAME_STATE = 'UPDATE_NAME'
 UPDATE_INTERVAL_STATE = 'UPDATE_INTERVAL_STATE'
-
+UPDATE_PHOTO_STATE = 'UPDATE_PHOTO_STATE'
 
 dispatcher.add_handler(CommandHandler('start', command_start))
 dispatcher.add_handler(
@@ -314,9 +412,24 @@ dispatcher.add_handler(
     )
 )
 
+# Update plant photo
+dispatcher.add_handler(
+    ConversationHandler(
+        entry_points=[CallbackHandler(ask_update_photo, type_='plant-update-photo')],
+        states={
+            UPDATE_PHOTO_STATE: [MessageHandler(Filters.photo, update_photo)],
+        },
+        fallbacks=[],
+    )
+)
+
 dispatcher.add_handler(CommandHandler('list', command_list))
 dispatcher.add_handler(CallbackHandler(choose_plant, type_='plant-choose'))
 dispatcher.add_handler(CallbackHandler(command_list, type_='plant-menu'))
+dispatcher.add_handler(CallbackHandler(photo_plant, type_='plant-photo'))
+dispatcher.add_handler(CallbackHandler(delete_plant, type_='plant-delete'))
+dispatcher.add_handler(CallbackHandler(notify_plant, type_='plant-notification'))
+dispatcher.add_handler(CallbackHandler(watering_plant, type_='plant-watering'))
 
 if __name__ == '__main__':
     app.run()

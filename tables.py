@@ -42,6 +42,7 @@ class Plant(db.Model):
     id = models.UUID()
     name = models.Text()
     watering_interval = models.Interval()
+    photo_id = models.Text(nullable=True)
 
     home_id = models.ForeignKey('homes.id')
     home = db.relationship('Home')
