@@ -24,3 +24,4 @@ docker-compose run --rm app db upgrade
   - [ ] Update notify settings (time of day)
   - [ ] Improve bot dialogs
   - [ ] Persistent store
+  - [ ] Cron job

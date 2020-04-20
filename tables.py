@@ -48,3 +48,12 @@ class Plant(db.Model):
     home = db.relationship('Home')
 
     date_created = models.DateCreated()
+
+
+class PlantWatering(db.Model):
+    __tablename__ = 'plant_watering'
+
+    id = models.UUID()
+    date = models.DateCreated()
+    plant_id = models.ForeignKey('plants.id')
+    user_id = models.ForeignKey('users.id')

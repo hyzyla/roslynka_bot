@@ -13,7 +13,7 @@ from flask import Flask, request
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from telegram import (
-    InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, Update, Message
+    InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, Update
 )
 from telegram.ext import (
     CallbackQueryHandler, CommandHandler, ConversationHandler, Dispatcher, Filters,
@@ -46,7 +46,7 @@ def bot_handler():
     return 'OK'
 
 
-from tables import TelegramUser, User, Plant, Home
+from tables import TelegramUser, User, Plant, Home, PlantWatering
 
 
 def user_required(func):
@@ -363,8 +363,11 @@ def notify_plant(update, context, telegram_user):
 @user_required
 def watering_plant(update, context, telegram_user):
     _, plant_id = update.callback_query.data.split('|')
-    plant = Plant.query.get(plant_id)
-    
+
+    watering = PlantWatering(plant_id=plant_id, user_id=telegram_user.user_id)
+    db.session.add(watering)
+    db.session.commit()
+    update.effective_message.edit_reply_markup()
 
 
 @enum.unique
