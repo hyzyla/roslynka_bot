@@ -33,5 +33,5 @@ jobs:
               cd bot
               git pull
               pip install -r requirements.txt
-              uwsgi --ini=bot.ini
+              sudo systemctl restart plant-bot
 
