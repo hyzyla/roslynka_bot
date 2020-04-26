@@ -22,6 +22,17 @@ services:
     entrypoint: flask
     command: run --host 0.0.0.0
 
+  uwsgi:
+    tty: true
+    environment: *app-environment
+    build: .
+    image: roslynka-bot
+    ports: ["5000:5000"]
+    volumes: ['.:/work']
+    depends_on: [db]
+    entrypoint: uwsgi
+    command: --http=0.0.0.0:5000 --py-autoreload=1 --ini=bot.ini --processes=1
+
   db:
     image: postgres
     ports: ["5432:5432"]

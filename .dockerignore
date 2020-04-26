@@ -1,3 +1,4 @@
 .database
 .env
 venv
+plant-bot-nginx.sock
