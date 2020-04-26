@@ -18,9 +18,20 @@ jobs:
         - name: executing remote ssh commands using password
           uses: appleboy/ssh-action@master
           with:
+            # Connect options
             host: ${{ secrets.SSH_HOST }}
             username: ${{ secrets.SSH_USERNAME }}
             key: ${{ secrets.SSH_KEY }}
             passphrase: ${{ secrets.SSH_PASSPHRASE }}
             port: ${{ secrets.SSH_PORT }}
-            script: whoami
+
+            script_stop: true  # stop after first failure
+            script: |
+              echo $PWD
+              whoami
+              source env/bin/activate
+              cd bot
+              git pull
+              pip install -r requirements.txt
+              uwsgi --ini=bot.ini
+
